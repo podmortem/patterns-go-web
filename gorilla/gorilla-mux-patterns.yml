@@ -1,0 +1,369 @@
+metadata:
+  library_id: "gorilla-mux-patterns"
+  version: "1.0.0"
+  maintainer: "podmortem-community"
+  compatibility: ["gorilla-mux-1.8+"]
+  dependencies: []
+
+categories:
+  - router
+  - middleware
+  - routing
+  - url_matching
+  - subrouting
+
+patterns:
+  - id: "gorilla_mux_route_not_found"
+    name: "Gorilla Mux Route Not Found"
+    
+    primary_pattern:
+      regex: "mux.*404.*Not Found|gorilla.*mux.*route.*not.*found|mux.*path.*not.*matched"
+      confidence: 0.83
+    
+    secondary_patterns:
+      - regex: "mux\\.NewRouter|gorilla/mux"
+        weight: 0.5
+        proximity_window: 30
+      - regex: "HandleFunc|Handle.*404"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "NotFoundHandler|404.*handler"
+        weight: 0.7
+        proximity_window: 15
+    
+    severity: "LOW"
+    category: ["routing", "http_status", "path_matching"]
+    
+    remediation:
+      description: "Gorilla Mux could not find matching route"
+      common_causes:
+        - "Route pattern not matching request path"
+        - "HTTP method not registered for route"
+        - "Route constraints not satisfied"
+        - "Subrouter path prefix issues"
+      
+      suggested_commands:
+        - "Check route pattern matches request path"
+        - "Verify HTTP method registration: Methods('GET')"
+        - "Review route constraints and requirements"
+        - "Test route matching with mux debugging"
+      
+      documentation_links:
+        - "https://github.com/gorilla/mux"
+        - "https://pkg.go.dev/github.com/gorilla/mux#Router"
+    
+    context_extraction:
+      lines_before: 8
+      lines_after: 5
+
+  - id: "gorilla_mux_variable_error"
+    name: "Gorilla Mux Variable Error"
+    
+    primary_pattern:
+      regex: "mux.*Vars.*error|gorilla.*mux.*variable.*error|mux.*path.*variable.*missing"
+      confidence: 0.85
+    
+    secondary_patterns:
+      - regex: "mux\\.Vars|Vars\\(.*\\)"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "\\{[^}]+\\}.*variable|path.*variable"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "variable.*not.*found|vars.*empty"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["url_variables", "routing", "parameter_extraction"]
+    
+    remediation:
+      description: "Gorilla Mux path variable extraction failed"
+      common_causes:
+        - "Variable name not defined in route pattern"
+        - "Variable name mismatch in Vars() call"
+        - "Route pattern not matching variable format"
+        - "Missing variable in actual request path"
+      
+      suggested_commands:
+        - "Verify variable name matches route: {id} -> vars['id']"
+        - "Check route pattern includes variable definition"
+        - "Add variable validation and error handling"
+        - "Use regular expressions for variable constraints"
+      
+      documentation_links:
+        - "https://github.com/gorilla/mux#url-path-variables"
+        - "https://pkg.go.dev/github.com/gorilla/mux#Vars"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "gorilla_mux_middleware_error"
+    name: "Gorilla Mux Middleware Error"
+    
+    primary_pattern:
+      regex: "mux.*middleware.*error|gorilla.*mux.*middleware.*failed|middleware.*panic.*mux"
+      confidence: 0.87
+    
+    secondary_patterns:
+      - regex: "router\\.Use|mux.*Use"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "middleware.*chain|middleware.*stack"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "ServeHTTP.*error|handler.*error"
+        weight: 0.4
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["middleware", "request_processing", "handler_chain"]
+    
+    remediation:
+      description: "Gorilla Mux middleware encountered an error"
+      common_causes:
+        - "Middleware panic or unhandled error"
+        - "Middleware not calling next handler"
+        - "Incorrect middleware registration order"
+        - "Middleware chain interruption"
+      
+      suggested_commands:
+        - "Add error handling in custom middleware"
+        - "Ensure middleware calls next handler properly"
+        - "Review middleware registration order"
+        - "Add panic recovery middleware"
+      
+      documentation_links:
+        - "https://github.com/gorilla/mux#middleware"
+        - "https://golang.org/pkg/net/http/#Handler"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 10
+      include_stack_trace: true
+
+  - id: "gorilla_mux_subrouter_error"
+    name: "Gorilla Mux Subrouter Error"
+    
+    primary_pattern:
+      regex: "mux.*subrouter.*error|gorilla.*mux.*PathPrefix.*error|subrouter.*mount.*failed"
+      confidence: 0.84
+    
+    secondary_patterns:
+      - regex: "PathPrefix|router\\.PathPrefix"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "Subrouter|subrouter.*handler"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "StrictSlash|path.*prefix.*error"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["subrouting", "path_prefix", "nested_routing"]
+    
+    remediation:
+      description: "Gorilla Mux subrouter configuration failed"
+      common_causes:
+        - "Incorrect path prefix configuration"
+        - "Conflicting routes in subrouter"
+        - "StrictSlash setting conflicts"
+        - "Subrouter handler registration issues"
+      
+      suggested_commands:
+        - "Check PathPrefix configuration: PathPrefix('/api/')"
+        - "Verify no route conflicts in subrouter"
+        - "Review StrictSlash settings"
+        - "Test subrouter path matching"
+      
+      documentation_links:
+        - "https://github.com/gorilla/mux#subrouters"
+        - "https://pkg.go.dev/github.com/gorilla/mux#Router.PathPrefix"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 10
+
+  - id: "gorilla_mux_method_not_allowed"
+    name: "Gorilla Mux Method Not Allowed"
+    
+    primary_pattern:
+      regex: "mux.*405.*Method.*Not.*Allowed|gorilla.*mux.*method.*not.*allowed|MethodNotAllowedHandler"
+      confidence: 0.86
+    
+    secondary_patterns:
+      - regex: "Methods\\(.*\\)|HTTP.*method"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "405.*status|Method.*Not.*Allowed"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "GET|POST|PUT|DELETE.*not.*allowed"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "LOW"
+    category: ["http_methods", "routing", "method_validation"]
+    
+    remediation:
+      description: "Gorilla Mux rejected request due to unsupported HTTP method"
+      common_causes:
+        - "Route registered for different HTTP methods"
+        - "Missing method specification in route"
+        - "Client using incorrect HTTP method"
+        - "Method constraints not satisfied"
+      
+      suggested_commands:
+        - "Add required HTTP method: Methods('POST')"
+        - "Check client is using correct HTTP method"
+        - "Review route method constraints"
+        - "Implement MethodNotAllowedHandler for custom response"
+      
+      documentation_links:
+        - "https://github.com/gorilla/mux#restricting-the-router-to-specific-http-methods"
+        - "https://pkg.go.dev/github.com/gorilla/mux#Router.Methods"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "gorilla_mux_regex_error"
+    name: "Gorilla Mux Regex Error"
+    
+    primary_pattern:
+      regex: "mux.*regex.*error|gorilla.*mux.*pattern.*error|route.*regex.*compilation.*failed"
+      confidence: 0.88
+    
+    secondary_patterns:
+      - regex: "MatcherFunc|Path\\(.*\\)"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "regex.*compile|pattern.*invalid"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "route.*constraint|path.*pattern"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "HIGH"
+    category: ["regex", "route_patterns", "compilation"]
+    
+    remediation:
+      description: "Gorilla Mux route regex pattern compilation failed"
+      common_causes:
+        - "Invalid regular expression syntax"
+        - "Complex regex causing compilation errors"
+        - "Regex pattern conflicts with route structure"
+        - "Unsupported regex features"
+      
+      suggested_commands:
+        - "Validate regex pattern syntax"
+        - "Test regex patterns independently"
+        - "Simplify complex regex patterns"
+        - "Use Path() and PathPrefix() for simple patterns"
+      
+      documentation_links:
+        - "https://github.com/gorilla/mux#matching-routes"
+        - "https://golang.org/pkg/regexp/"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 10
+
+  - id: "gorilla_mux_host_matching_error"
+    name: "Gorilla Mux Host Matching Error"
+    
+    primary_pattern:
+      regex: "mux.*host.*matching.*error|gorilla.*mux.*Host.*error|host.*constraint.*failed"
+      confidence: 0.82
+    
+    secondary_patterns:
+      - regex: "Host\\(.*\\)|host.*constraint"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "subdomain.*matching|host.*pattern"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "virtual.*host|host.*header"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["host_matching", "routing", "virtual_hosts"]
+    
+    remediation:
+      description: "Gorilla Mux host-based routing failed"
+      common_causes:
+        - "Host header not matching route constraint"
+        - "Invalid host pattern or regex"
+        - "Missing Host header in request"
+        - "Subdomain routing configuration issues"
+      
+      suggested_commands:
+        - "Check Host() constraint matches request host"
+        - "Verify host pattern syntax and format"
+        - "Test with correct Host header"
+        - "Review subdomain routing configuration"
+      
+      documentation_links:
+        - "https://github.com/gorilla/mux#restricting-the-router-to-specific-domains"
+        - "https://pkg.go.dev/github.com/gorilla/mux#Router.Host"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "gorilla_mux_query_parameter_error"
+    name: "Gorilla Mux Query Parameter Error"
+    
+    primary_pattern:
+      regex: "mux.*query.*parameter.*error|gorilla.*mux.*Queries.*error|query.*constraint.*failed"
+      confidence: 0.84
+    
+    secondary_patterns:
+      - regex: "Queries\\(.*\\)|query.*constraint"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "query.*parameter|URL.*query"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "parameter.*validation|query.*matching"
+        weight: 0.6
+        proximity_window: 15
+    
+    severity: "LOW"
+    category: ["query_parameters", "routing", "parameter_validation"]
+    
+    remediation:
+      description: "Gorilla Mux query parameter constraint failed"
+      common_causes:
+        - "Required query parameters missing"
+        - "Query parameter values not matching constraints"
+        - "Incorrect Queries() configuration"
+        - "Query parameter format issues"
+      
+      suggested_commands:
+        - "Check required query parameters are present"
+        - "Verify Queries() constraint configuration"
+        - "Validate query parameter values and formats"
+        - "Test route matching with query parameters"
+      
+      documentation_links:
+        - "https://github.com/gorilla/mux#matching-routes"
+        - "https://pkg.go.dev/github.com/gorilla/mux#Router.Queries"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+related_patterns:
+  - id: "gorilla_mux_variable_error"
+    related_to: ["gorilla_mux_route_not_found", "gorilla_mux_regex_error"]
+  - id: "gorilla_mux_middleware_error"
+    related_to: ["gorilla_mux_subrouter_error"]
+  - id: "gorilla_mux_method_not_allowed"
+    related_to: ["gorilla_mux_route_not_found"]
+  - id: "gorilla_mux_regex_error"
+    related_to: ["gorilla_mux_host_matching_error"]

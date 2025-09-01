@@ -1,0 +1,414 @@
+metadata:
+  library_id: "echo-core-patterns"
+  version: "1.0.0"
+  maintainer: "podmortem-community"
+  compatibility: ["echo-4.7+", "echo-4.8+", "echo-4.9+"]
+  dependencies: []
+
+categories:
+  - web_framework
+  - http_server
+  - middleware
+  - routing
+  - json_binding
+  - error_handling
+
+patterns:
+  - id: "echo_http_error_handler"
+    name: "Echo HTTP Error Handler"
+    
+    primary_pattern:
+      regex: "echo\\.HTTPError|code=\\d{3}.*message=|HTTP.*error.*handler|echo.*error.*response"
+      confidence: 0.90
+    
+    secondary_patterns:
+      - regex: "code=500|code=404|code=400"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "Internal Server Error|Not Found|Bad Request"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "echo\\.NewHTTPError"
+        weight: 0.7
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["error_handling", "http_status"]
+    
+    remediation:
+      description: "Echo HTTP error handler processed an error"
+      common_causes:
+        - "Handler function returned an error"
+        - "Middleware encountered an error"
+        - "Route parameter validation failed"
+        - "Custom error handling logic triggered"
+      
+      suggested_commands:
+        - "Check handler implementation for error conditions"
+        - "Review middleware error handling"
+        - "Implement custom error handler with e.HTTPErrorHandler"
+        - "Add proper error logging and monitoring"
+      
+      documentation_links:
+        - "https://echo.labstack.com/guide/error-handling/"
+        - "https://echo.labstack.com/guide/customization/"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "echo_bind_error"
+    name: "Echo Request Binding Error"
+    
+    primary_pattern:
+      regex: "bind.*request.*failed|echo.*bind.*error|Bind\\(.*error|unmarshal.*type.*error"
+      confidence: 0.88
+    
+    secondary_patterns:
+      - regex: "c\\.Bind|echo\\.Context.*Bind"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "json.*unmarshal|xml.*unmarshal"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "form.*binding|query.*binding"
+        weight: 0.4
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["binding", "validation", "request_parsing"]
+    
+    remediation:
+      description: "Echo failed to bind request data to struct"
+      common_causes:
+        - "Invalid JSON or XML in request body"
+        - "Type mismatch between request data and struct"
+        - "Missing required fields"
+        - "Malformed query parameters or form data"
+      
+      suggested_commands:
+        - "Validate request content type and format"
+        - "Check struct field tags (json, form, query)"
+        - "Add validation using echo validator middleware"
+        - "Handle binding errors gracefully in handlers"
+      
+      documentation_links:
+        - "https://echo.labstack.com/guide/request/"
+        - "https://echo.labstack.com/guide/binding/"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "echo_middleware_error"
+    name: "Echo Middleware Error"
+    
+    primary_pattern:
+      regex: "middleware.*error|middleware.*panic|CORS.*error|JWT.*authentication.*failed"
+      confidence: 0.85
+    
+    secondary_patterns:
+      - regex: "echo\\.MiddlewareFunc|middleware\\..*Error"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "cors.*middleware|jwt.*middleware|logger.*middleware"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "next\\(c\\)|return.*next"
+        weight: 0.4
+        proximity_window: 15
+    
+    severity: "HIGH"
+    category: ["middleware", "authentication", "cors"]
+    
+    remediation:
+      description: "Echo middleware encountered an error"
+      common_causes:
+        - "JWT token validation failed"
+        - "CORS policy violation"
+        - "Custom middleware panic"
+        - "Authentication middleware rejection"
+      
+      suggested_commands:
+        - "Check JWT token format and expiration"
+        - "Configure CORS allowed origins and methods"
+        - "Add error handling in custom middleware"
+        - "Review middleware execution order"
+      
+      documentation_links:
+        - "https://echo.labstack.com/middleware/"
+        - "https://echo.labstack.com/middleware/jwt/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 10
+      include_stack_trace: true
+
+  - id: "echo_route_not_found"
+    name: "Echo Route Not Found"
+    
+    primary_pattern:
+      regex: "route.*not.*found|404.*Not Found|echo.*route.*missing|path.*not.*registered"
+      confidence: 0.82
+    
+    secondary_patterns:
+      - regex: "GET|POST|PUT|DELETE.*404"
+        weight: 0.5
+        proximity_window: 15
+      - regex: "echo\\.GET|echo\\.POST|echo\\.PUT"
+        weight: 0.4
+        proximity_window: 30
+      - regex: "NotFoundHandler|route.*handler.*nil"
+        weight: 0.6
+        proximity_window: 20
+    
+    severity: "LOW"
+    category: ["routing", "http_status"]
+    
+    remediation:
+      description: "Echo could not find matching route"
+      common_causes:
+        - "Route not registered in router"
+        - "Incorrect HTTP method"
+        - "URL path mismatch"
+        - "Route parameter format issues"
+      
+      suggested_commands:
+        - "Verify route registration: e.GET('/path', handler)"
+        - "Check HTTP method matches route definition"
+        - "Validate URL parameters and wildcards"
+        - "Use echo debug mode to list registered routes"
+      
+      documentation_links:
+        - "https://echo.labstack.com/guide/routing/"
+        - "https://echo.labstack.com/guide/routing/#path-parameters"
+    
+    context_extraction:
+      lines_before: 8
+      lines_after: 5
+
+  - id: "echo_server_startup_error"
+    name: "Echo Server Startup Error"
+    
+    primary_pattern:
+      regex: "server.*startup.*failed|listen.*tcp.*bind.*address.*already.*in.*use|echo.*start.*error|Start\\(.*error"
+      confidence: 0.93
+    
+    secondary_patterns:
+      - regex: "address already in use|port.*in.*use"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "e\\.Start|echo\\.Start"
+        weight: 0.5
+        proximity_window: 20
+      - regex: ":1323|:8080|:3000"
+        weight: 0.3
+        proximity_window: 25
+    
+    severity: "CRITICAL"
+    category: ["server", "startup", "port_binding"]
+    
+    remediation:
+      description: "Echo server failed to start"
+      common_causes:
+        - "Port already in use by another process"
+        - "Invalid port number or binding address"
+        - "Insufficient permissions for port binding"
+        - "TLS certificate configuration errors"
+      
+      suggested_commands:
+        - "Check port usage: netstat -tulpn | grep :1323"
+        - "Use different port: e.Start(':8081')"
+        - "Kill process using port: fuser -k 1323/tcp"
+        - "Check TLS certificate paths and permissions"
+      
+      documentation_links:
+        - "https://echo.labstack.com/guide/"
+        - "https://echo.labstack.com/guide/customization/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 10
+
+  - id: "echo_template_render_error"
+    name: "Echo Template Rendering Error"
+    
+    primary_pattern:
+      regex: "template.*render.*error|Render\\(.*error|template.*not.*found|template.*parse.*error"
+      confidence: 0.87
+    
+    secondary_patterns:
+      - regex: "c\\.Render|echo.*Renderer"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "html/template|text/template"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "template.*undefined|template.*syntax.*error"
+        weight: 0.7
+        proximity_window: 20
+    
+    severity: "MEDIUM"
+    category: ["templates", "rendering"]
+    
+    remediation:
+      description: "Echo template rendering failed"
+      common_causes:
+        - "Template file not found"
+        - "Template syntax errors"
+        - "Missing template data"
+        - "Renderer not properly configured"
+      
+      suggested_commands:
+        - "Verify template files exist and are accessible"
+        - "Check template syntax and structure"
+        - "Ensure template renderer is set: e.Renderer = renderer"
+        - "Validate template data matches expected structure"
+      
+      documentation_links:
+        - "https://echo.labstack.com/guide/templates/"
+        - "https://golang.org/pkg/html/template/"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "echo_context_timeout"
+    name: "Echo Context Timeout"
+    
+    primary_pattern:
+      regex: "context.*deadline.*exceeded|context.*timeout|request.*timeout|echo.*timeout"
+      confidence: 0.89
+    
+    secondary_patterns:
+      - regex: "context\\.WithTimeout|context\\.WithDeadline"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "TimeoutHandler|timeout.*middleware"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "database.*timeout|external.*service.*timeout"
+        weight: 0.4
+        proximity_window: 30
+    
+    severity: "HIGH"
+    category: ["timeout", "context", "performance"]
+    
+    remediation:
+      description: "Echo request processing exceeded timeout"
+      common_causes:
+        - "Slow database queries"
+        - "Long-running external API calls"
+        - "Insufficient timeout configuration"
+        - "Resource contention and blocking"
+      
+      suggested_commands:
+        - "Optimize slow database operations"
+        - "Implement proper timeout handling"
+        - "Use timeout middleware for request limits"
+        - "Add circuit breakers for external services"
+      
+      documentation_links:
+        - "https://echo.labstack.com/middleware/timeout/"
+        - "https://golang.org/pkg/context/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+      include_stack_trace: true
+
+  - id: "echo_validator_error"
+    name: "Echo Validator Error"
+    
+    primary_pattern:
+      regex: "validation.*failed|validator.*error|field.*validation.*failed|required.*field.*missing"
+      confidence: 0.86
+    
+    secondary_patterns:
+      - regex: "validate.*struct|validator\\.Validate"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "required.*tag|min.*tag|max.*tag"
+        weight: 0.5
+        proximity_window: 15
+      - regex: "echo.*validator|custom.*validator"
+        weight: 0.4
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["validation", "request_processing"]
+    
+    remediation:
+      description: "Echo request validation failed"
+      common_causes:
+        - "Required fields missing from request"
+        - "Field values don't meet validation constraints"
+        - "Custom validation rules failed"
+        - "Invalid data format or type"
+      
+      suggested_commands:
+        - "Check required fields are provided in request"
+        - "Validate field constraints (min, max, format)"
+        - "Review custom validation logic"
+        - "Use proper struct tags for validation"
+      
+      documentation_links:
+        - "https://echo.labstack.com/guide/request/#validate-data"
+        - "https://github.com/go-playground/validator"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "echo_websocket_error"
+    name: "Echo WebSocket Error"
+    
+    primary_pattern:
+      regex: "websocket.*upgrade.*failed|websocket.*connection.*error|ws.*handshake.*failed|websocket.*close.*error"
+      confidence: 0.88
+    
+    secondary_patterns:
+      - regex: "gorilla/websocket|websocket\\.Upgrader"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "Upgrade.*websocket|websocket.*protocol"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "websocket.*read.*error|websocket.*write.*error"
+        weight: 0.7
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["websocket", "real_time", "connection"]
+    
+    remediation:
+      description: "Echo WebSocket connection failed"
+      common_causes:
+        - "WebSocket upgrade handshake failed"
+        - "Connection closed unexpectedly"
+        - "Invalid WebSocket protocol or headers"
+        - "Network connectivity issues"
+      
+      suggested_commands:
+        - "Check WebSocket upgrade headers and protocol"
+        - "Verify client WebSocket implementation"
+        - "Add proper error handling for WebSocket operations"
+        - "Implement connection heartbeat and reconnection"
+      
+      documentation_links:
+        - "https://echo.labstack.com/cookbook/websocket/"
+        - "https://github.com/gorilla/websocket"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 10
+
+related_patterns:
+  - id: "echo_http_error_handler"
+    related_to: ["echo_bind_error", "echo_validator_error"]
+  - id: "echo_middleware_error"
+    related_to: ["echo_context_timeout", "echo_server_startup_error"]
+  - id: "echo_route_not_found"
+    related_to: ["echo_http_error_handler"]
+  - id: "echo_context_timeout"
+    related_to: ["echo_websocket_error"]

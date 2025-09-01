@@ -1,0 +1,326 @@
+metadata:
+  library_id: "websocket-patterns"
+  version: "1.0.0"
+  maintainer: "podmortem-community"
+  compatibility: ["gorilla-websocket-1.4+", "gorilla-websocket-1.5+"]
+  dependencies: []
+
+categories:
+  - websocket
+  - real_time
+  - connection_management
+  - message_handling
+  - upgrade
+
+patterns:
+  - id: "websocket_upgrade_failed"
+    name: "WebSocket Upgrade Failed"
+    
+    primary_pattern:
+      regex: "websocket.*upgrade.*failed|upgrade.*websocket.*error|handshake.*failed|websocket.*protocol.*error"
+      confidence: 0.91
+    
+    secondary_patterns:
+      - regex: "gorilla/websocket|websocket\\.Upgrader"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "Origin.*not.*allowed|subprotocol.*not.*supported"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "Connection.*Upgrade|Upgrade.*websocket"
+        weight: 0.5
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["upgrade", "handshake", "protocol"]
+    
+    remediation:
+      description: "WebSocket upgrade handshake failed"
+      common_causes:
+        - "Invalid WebSocket headers in request"
+        - "Origin not allowed by server policy"
+        - "Unsupported WebSocket subprotocol"
+        - "HTTP version not supporting upgrade"
+      
+      suggested_commands:
+        - "Check WebSocket upgrade headers (Connection, Upgrade)"
+        - "Configure allowed origins in upgrader"
+        - "Verify client WebSocket protocol version"
+        - "Review upgrader configuration and policies"
+      
+      documentation_links:
+        - "https://github.com/gorilla/websocket"
+        - "https://tools.ietf.org/html/rfc6455"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+
+  - id: "websocket_connection_closed"
+    name: "WebSocket Connection Closed"
+    
+    primary_pattern:
+      regex: "websocket.*connection.*closed|websocket.*close.*error|connection.*closed.*abnormally|websocket.*EOF"
+      confidence: 0.88
+    
+    secondary_patterns:
+      - regex: "close.*code.*\\d+|close.*reason"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "conn\\.Close|websocket.*Close"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "unexpected.*EOF|broken.*pipe"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["connection", "lifecycle", "cleanup"]
+    
+    remediation:
+      description: "WebSocket connection was closed unexpectedly"
+      common_causes:
+        - "Client closed connection abruptly"
+        - "Network interruption or timeout"
+        - "Server-side connection cleanup"
+        - "Application-level connection termination"
+      
+      suggested_commands:
+        - "Implement proper close frame handling"
+        - "Add connection heartbeat/ping-pong"
+        - "Handle network interruptions gracefully"
+        - "Log close codes and reasons for debugging"
+      
+      documentation_links:
+        - "https://github.com/gorilla/websocket#close-handling"
+        - "https://tools.ietf.org/html/rfc6455#section-7"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 10
+
+  - id: "websocket_read_error"
+    name: "WebSocket Read Error"
+    
+    primary_pattern:
+      regex: "websocket.*read.*error|ReadMessage.*error|websocket.*receive.*error|read.*websocket.*failed"
+      confidence: 0.89
+    
+    secondary_patterns:
+      - regex: "conn\\.ReadMessage|conn\\.ReadJSON"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "message.*type.*invalid|frame.*error"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "timeout.*reading|read.*deadline.*exceeded"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["message_handling", "data_transfer", "protocol"]
+    
+    remediation:
+      description: "WebSocket message read operation failed"
+      common_causes:
+        - "Invalid WebSocket frame format"
+        - "Connection closed during read"
+        - "Read timeout exceeded"
+        - "Message size limits exceeded"
+      
+      suggested_commands:
+        - "Add proper error handling for ReadMessage"
+        - "Implement read timeout handling"
+        - "Validate message format and size"
+        - "Handle connection state during reads"
+      
+      documentation_links:
+        - "https://github.com/gorilla/websocket#control-messages"
+        - "https://godoc.org/github.com/gorilla/websocket#Conn.ReadMessage"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "websocket_write_error"
+    name: "WebSocket Write Error"
+    
+    primary_pattern:
+      regex: "websocket.*write.*error|WriteMessage.*error|websocket.*send.*error|write.*websocket.*failed"
+      confidence: 0.87
+    
+    secondary_patterns:
+      - regex: "conn\\.WriteMessage|conn\\.WriteJSON"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "write.*deadline.*exceeded|write.*timeout"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "connection.*closed.*write|broken.*pipe"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["message_handling", "data_transfer", "connection"]
+    
+    remediation:
+      description: "WebSocket message write operation failed"
+      common_causes:
+        - "Connection closed before write completed"
+        - "Write timeout exceeded"
+        - "Message size too large"
+        - "Network connectivity issues"
+      
+      suggested_commands:
+        - "Check connection state before writing"
+        - "Implement write timeout handling"
+        - "Add message size validation"
+        - "Handle write errors gracefully"
+      
+      documentation_links:
+        - "https://godoc.org/github.com/gorilla/websocket#Conn.WriteMessage"
+        - "https://github.com/gorilla/websocket#concurrency"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "websocket_ping_pong_error"
+    name: "WebSocket Ping/Pong Error"
+    
+    primary_pattern:
+      regex: "websocket.*ping.*error|pong.*handler.*error|ping.*timeout|heartbeat.*failed"
+      confidence: 0.85
+    
+    secondary_patterns:
+      - regex: "SetPingHandler|SetPongHandler"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "ping.*frame|pong.*frame"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "keepalive.*failed|heartbeat.*timeout"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "LOW"
+    category: ["keepalive", "heartbeat", "connection_health"]
+    
+    remediation:
+      description: "WebSocket ping/pong mechanism failed"
+      common_causes:
+        - "Client not responding to ping frames"
+        - "Network latency affecting ping/pong timing"
+        - "Ping/pong handler configuration issues"
+        - "Connection health check failures"
+      
+      suggested_commands:
+        - "Configure appropriate ping/pong intervals"
+        - "Implement proper ping/pong handlers"
+        - "Monitor connection health metrics"
+        - "Add fallback for failed ping/pong"
+      
+      documentation_links:
+        - "https://github.com/gorilla/websocket#control-messages"
+        - "https://tools.ietf.org/html/rfc6455#section-5.5.2"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "websocket_message_size_exceeded"
+    name: "WebSocket Message Size Exceeded"
+    
+    primary_pattern:
+      regex: "websocket.*message.*too.*large|message.*size.*exceeded|frame.*too.*large|payload.*size.*limit"
+      confidence: 0.86
+    
+    secondary_patterns:
+      - regex: "SetReadLimit|ReadLimit"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "MaxMessageSize|message.*size.*limit"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "frame.*size.*error|payload.*length"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["message_size", "limits", "validation"]
+    
+    remediation:
+      description: "WebSocket message exceeded size limits"
+      common_causes:
+        - "Client sending oversized messages"
+        - "Insufficient message size limits configured"
+        - "Large binary data transfer attempts"
+        - "Malicious or malformed message attacks"
+      
+      suggested_commands:
+        - "Configure appropriate message size limits"
+        - "Implement message chunking for large data"
+        - "Add client-side message size validation"
+        - "Monitor message size patterns"
+      
+      documentation_links:
+        - "https://godoc.org/github.com/gorilla/websocket#Conn.SetReadLimit"
+        - "https://github.com/gorilla/websocket#control-messages"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "websocket_concurrent_write"
+    name: "WebSocket Concurrent Write Error"
+    
+    primary_pattern:
+      regex: "concurrent.*write.*websocket|websocket.*concurrent.*write|write.*not.*safe.*concurrent"
+      confidence: 0.90
+    
+    secondary_patterns:
+      - regex: "goroutine.*write|concurrent.*access"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "WriteMessage.*concurrent|write.*mutex"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "race.*condition|data.*race"
+        weight: 0.5
+        proximity_window: 30
+    
+    severity: "HIGH"
+    category: ["concurrency", "race_condition", "thread_safety"]
+    
+    remediation:
+      description: "Concurrent WebSocket write operations detected"
+      common_causes:
+        - "Multiple goroutines writing simultaneously"
+        - "Missing synchronization for write operations"
+        - "Race condition in message sending logic"
+        - "Improper connection sharing between goroutines"
+      
+      suggested_commands:
+        - "Use mutex to synchronize write operations"
+        - "Implement write channel for serialization"
+        - "Ensure single goroutine handles writes"
+        - "Review concurrent access patterns"
+      
+      documentation_links:
+        - "https://github.com/gorilla/websocket#concurrency"
+        - "https://golang.org/doc/articles/race_detector"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+      include_stack_trace: true
+
+related_patterns:
+  - id: "websocket_upgrade_failed"
+    related_to: ["websocket_connection_closed"]
+  - id: "websocket_read_error"
+    related_to: ["websocket_connection_closed", "websocket_message_size_exceeded"]
+  - id: "websocket_write_error"
+    related_to: ["websocket_connection_closed", "websocket_concurrent_write"]
+  - id: "websocket_ping_pong_error"
+    related_to: ["websocket_connection_closed"]

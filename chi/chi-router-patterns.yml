@@ -1,0 +1,369 @@
+metadata:
+  library_id: "chi-router-patterns"
+  version: "1.0.0"
+  maintainer: "podmortem-community"
+  compatibility: ["chi-5.0+", "chi-5.1+"]
+  dependencies: []
+
+categories:
+  - router
+  - middleware
+  - routing
+  - http_server
+  - url_parameters
+
+patterns:
+  - id: "chi_route_not_found"
+    name: "Chi Route Not Found"
+    
+    primary_pattern:
+      regex: "chi.*404.*Not Found|route.*not.*found.*chi|chi.*path.*not.*registered"
+      confidence: 0.84
+    
+    secondary_patterns:
+      - regex: "chi\\.Get|chi\\.Post|chi\\.Put"
+        weight: 0.5
+        proximity_window: 30
+      - regex: "404.*status|Not Found.*handler"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "chi\\.NewRouter|chi\\.Router"
+        weight: 0.4
+        proximity_window: 35
+    
+    severity: "LOW"
+    category: ["routing", "http_status", "path_matching"]
+    
+    remediation:
+      description: "Chi router could not find matching route"
+      common_causes:
+        - "Route not registered in router"
+        - "Incorrect URL path or pattern"
+        - "HTTP method mismatch"
+        - "Route parameter format issues"
+      
+      suggested_commands:
+        - "Verify route registration: r.Get('/path', handler)"
+        - "Check URL path matches route pattern"
+        - "Validate HTTP method matches route definition"
+        - "Review route parameter patterns and constraints"
+      
+      documentation_links:
+        - "https://github.com/go-chi/chi"
+        - "https://github.com/go-chi/chi#routing"
+    
+    context_extraction:
+      lines_before: 8
+      lines_after: 5
+
+  - id: "chi_middleware_panic"
+    name: "Chi Middleware Panic"
+    
+    primary_pattern:
+      regex: "chi.*middleware.*panic|middleware.*panic.*chi|recoverer.*middleware.*panic"
+      confidence: 0.89
+    
+    secondary_patterns:
+      - regex: "middleware\\.Recoverer|chi.*Recoverer"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "runtime error.*middleware|panic.*recovered"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "chi\\.Use|r\\.Use.*middleware"
+        weight: 0.4
+        proximity_window: 25
+    
+    severity: "HIGH"
+    category: ["middleware", "panic", "recovery"]
+    
+    remediation:
+      description: "Chi middleware encountered a panic"
+      common_causes:
+        - "Unhandled error in custom middleware"
+        - "Nil pointer dereference in middleware chain"
+        - "Type assertion failures in middleware"
+        - "Resource access issues in middleware"
+      
+      suggested_commands:
+        - "Add middleware.Recoverer to middleware stack"
+        - "Add proper error handling in custom middleware"
+        - "Use safe type assertions in middleware"
+        - "Add nil checks before pointer operations"
+      
+      documentation_links:
+        - "https://github.com/go-chi/chi/tree/master/middleware"
+        - "https://github.com/go-chi/chi#middleware"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+      include_stack_trace: true
+
+  - id: "chi_url_param_error"
+    name: "Chi URL Parameter Error"
+    
+    primary_pattern:
+      regex: "chi.*URLParam.*error|url.*param.*not.*found|chi.*param.*missing|URLParam.*empty"
+      confidence: 0.86
+    
+    secondary_patterns:
+      - regex: "chi\\.URLParam|URLParam\\("
+        weight: 0.7
+        proximity_window: 15
+      - regex: "\\{[^}]+\\}.*param|route.*parameter"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "param.*validation|param.*parse.*error"
+        weight: 0.6
+        proximity_window: 20
+    
+    severity: "MEDIUM"
+    category: ["url_parameters", "routing", "validation"]
+    
+    remediation:
+      description: "Chi URL parameter extraction or validation failed"
+      common_causes:
+        - "URL parameter not defined in route pattern"
+        - "Parameter name mismatch in URLParam call"
+        - "Missing parameter in actual request URL"
+        - "Parameter validation or parsing errors"
+      
+      suggested_commands:
+        - "Verify parameter name matches route pattern: {id}"
+        - "Check URLParam call uses correct parameter name"
+        - "Add parameter validation and error handling"
+        - "Use URLParamFromCtx for context-based access"
+      
+      documentation_links:
+        - "https://github.com/go-chi/chi#url-parameters"
+        - "https://pkg.go.dev/github.com/go-chi/chi/v5#URLParam"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "chi_subrouter_error"
+    name: "Chi Subrouter Error"
+    
+    primary_pattern:
+      regex: "chi.*subrouter.*error|Route.*subrouter.*failed|chi.*mount.*error|subrouter.*panic"
+      confidence: 0.83
+    
+    secondary_patterns:
+      - regex: "r\\.Route|chi\\.Route"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "r\\.Mount|chi\\.Mount"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "subrouter.*middleware|nested.*router"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["subrouting", "mounting", "nested_routes"]
+    
+    remediation:
+      description: "Chi subrouter configuration or execution failed"
+      common_causes:
+        - "Incorrect subrouter mounting path"
+        - "Conflicting routes in subrouter"
+        - "Middleware conflicts in nested routers"
+        - "Path prefix issues in subrouting"
+      
+      suggested_commands:
+        - "Check subrouter mount path: r.Mount('/api', apiRouter)"
+        - "Verify no route conflicts in subrouter"
+        - "Review middleware order in nested routers"
+        - "Test subrouter paths and patterns"
+      
+      documentation_links:
+        - "https://github.com/go-chi/chi#sub-routers"
+        - "https://github.com/go-chi/chi#mounting-sub-routers"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 10
+
+  - id: "chi_middleware_timeout"
+    name: "Chi Middleware Timeout"
+    
+    primary_pattern:
+      regex: "chi.*timeout.*middleware|timeout.*middleware.*chi|middleware.*timeout.*exceeded"
+      confidence: 0.87
+    
+    secondary_patterns:
+      - regex: "middleware\\.Timeout|chi.*Timeout"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "context.*deadline.*exceeded|timeout.*handler"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "request.*timeout|handler.*timeout"
+        weight: 0.5
+        proximity_window: 15
+    
+    severity: "HIGH"
+    category: ["timeout", "middleware", "performance"]
+    
+    remediation:
+      description: "Chi timeout middleware exceeded configured limit"
+      common_causes:
+        - "Handler processing time too long"
+        - "Database queries taking too long"
+        - "External API calls timing out"
+        - "Resource contention causing delays"
+      
+      suggested_commands:
+        - "Optimize slow handler operations"
+        - "Increase timeout limit if appropriate"
+        - "Add database query optimization"
+        - "Implement caching for slow operations"
+      
+      documentation_links:
+        - "https://github.com/go-chi/chi/tree/master/middleware#timeout"
+        - "https://golang.org/pkg/context/#WithTimeout"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+
+  - id: "chi_cors_middleware_error"
+    name: "Chi CORS Middleware Error"
+    
+    primary_pattern:
+      regex: "chi.*cors.*error|cors.*middleware.*chi|CORS.*blocked.*chi|cors.*handler.*error"
+      confidence: 0.85
+    
+    secondary_patterns:
+      - regex: "cors\\.Handler|chi.*cors"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "Access-Control|origin.*not.*allowed"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "preflight.*request|OPTIONS.*request"
+        weight: 0.5
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["cors", "middleware", "security"]
+    
+    remediation:
+      description: "Chi CORS middleware blocked or failed to process request"
+      common_causes:
+        - "Origin not in allowed origins list"
+        - "HTTP method not allowed by CORS policy"
+        - "Missing or incorrect CORS headers"
+        - "Preflight request handling issues"
+      
+      suggested_commands:
+        - "Add origin to allowed origins in CORS config"
+        - "Configure allowed methods and headers"
+        - "Check CORS middleware configuration"
+        - "Test preflight requests manually"
+      
+      documentation_links:
+        - "https://github.com/go-chi/cors"
+        - "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "chi_rate_limiter_error"
+    name: "Chi Rate Limiter Error"
+    
+    primary_pattern:
+      regex: "chi.*rate.*limit.*error|rate.*limiter.*chi|throttle.*middleware.*error|rate.*limit.*exceeded.*chi"
+      confidence: 0.88
+    
+    secondary_patterns:
+      - regex: "middleware\\.Throttle|chi.*Throttle"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "rate.*limit.*exceeded|too.*many.*requests"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "429.*Too.*Many.*Requests|throttle.*limit"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["rate_limiting", "middleware", "throttling"]
+    
+    remediation:
+      description: "Chi rate limiter blocked request due to rate limit"
+      common_causes:
+        - "Client exceeding configured request rate"
+        - "Rate limit threshold set too low"
+        - "Burst traffic overwhelming rate limiter"
+        - "Rate limiter configuration issues"
+      
+      suggested_commands:
+        - "Review and adjust rate limit settings"
+        - "Implement client-side request throttling"
+        - "Add rate limit exemptions for trusted clients"
+        - "Monitor rate limiting patterns and adjust"
+      
+      documentation_links:
+        - "https://github.com/go-chi/chi/tree/master/middleware#throttle"
+        - "https://golang.org/x/time/rate"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "chi_request_id_error"
+    name: "Chi Request ID Error"
+    
+    primary_pattern:
+      regex: "chi.*request.*id.*error|RequestID.*middleware.*error|request.*id.*generation.*failed"
+      confidence: 0.81
+    
+    secondary_patterns:
+      - regex: "middleware\\.RequestID|chi.*RequestID"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "X-Request-ID|request.*id.*header"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "uuid.*generation|id.*generation.*error"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "LOW"
+    category: ["request_tracking", "middleware", "logging"]
+    
+    remediation:
+      description: "Chi Request ID middleware failed to generate or process ID"
+      common_causes:
+        - "UUID generation library issues"
+        - "Request ID header conflicts"
+        - "Middleware configuration problems"
+        - "Custom request ID generator failures"
+      
+      suggested_commands:
+        - "Check UUID generation library availability"
+        - "Review request ID middleware configuration"
+        - "Verify no header conflicts with request ID"
+        - "Test custom request ID generator if used"
+      
+      documentation_links:
+        - "https://github.com/go-chi/chi/tree/master/middleware#requestid"
+        - "https://github.com/google/uuid"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+related_patterns:
+  - id: "chi_middleware_panic"
+    related_to: ["chi_middleware_timeout", "chi_subrouter_error"]
+  - id: "chi_url_param_error"
+    related_to: ["chi_route_not_found"]
+  - id: "chi_cors_middleware_error"
+    related_to: ["chi_middleware_panic"]
+  - id: "chi_rate_limiter_error"
+    related_to: ["chi_middleware_timeout"]

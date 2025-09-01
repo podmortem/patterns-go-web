@@ -1,0 +1,458 @@
+metadata:
+  library_id: "fiber-core-patterns"
+  version: "1.0.0"
+  maintainer: "podmortem-community"
+  compatibility: ["fiber-2.40+", "fiber-2.45+", "fiber-2.48+"]
+  dependencies: []
+
+categories:
+  - web_framework
+  - http_server
+  - middleware
+  - routing
+  - json_parsing
+  - fasthttp
+
+patterns:
+  - id: "fiber_panic_recovery"
+    name: "Fiber Panic Recovery"
+    
+    primary_pattern:
+      regex: "fiber.*panic.*recovered|panic.*recovered.*fiber|runtime error.*fiber|recover.*middleware.*panic"
+      confidence: 0.94
+    
+    secondary_patterns:
+      - regex: "runtime error.*invalid memory address|nil pointer dereference"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "fiber\\.New|fiber\\.App"
+        weight: 0.4
+        proximity_window: 30
+      - regex: "goroutine.*panic|stack trace"
+        weight: 0.6
+        proximity_window: 25
+    
+    severity: "HIGH"
+    category: ["panic", "recovery", "runtime"]
+    
+    remediation:
+      description: "Fiber panic recovery middleware caught a runtime panic"
+      common_causes:
+        - "Nil pointer dereference in handler"
+        - "Index out of bounds errors"
+        - "Type assertion failures"
+        - "Concurrent map access issues"
+      
+      suggested_commands:
+        - "Add nil checks before pointer dereferencing"
+        - "Use sync.Map for concurrent map access"
+        - "Validate array/slice bounds before access"
+        - "Add recover middleware: app.Use(recover.New())"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/api/middleware/recover/"
+        - "https://golang.org/doc/effective_go#recover"
+    
+    context_extraction:
+      lines_before: 20
+      lines_after: 15
+      include_stack_trace: true
+
+  - id: "fiber_json_parse_error"
+    name: "Fiber JSON Parsing Error"
+    
+    primary_pattern:
+      regex: "fiber.*BodyParser.*error|json.*unmarshal.*error|invalid character.*json|parse.*json.*failed"
+      confidence: 0.87
+    
+    secondary_patterns:
+      - regex: "c\\.BodyParser|fiber\\.Ctx.*BodyParser"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "Content-Type.*application/json"
+        weight: 0.4
+        proximity_window: 25
+      - regex: "400.*Bad Request|malformed.*json"
+        weight: 0.5
+        proximity_window: 20
+    
+    severity: "MEDIUM"
+    category: ["json_parsing", "request_processing"]
+    
+    remediation:
+      description: "Fiber failed to parse JSON request body"
+      common_causes:
+        - "Malformed JSON in request body"
+        - "Content-Type header mismatch"
+        - "Empty request body when JSON expected"
+        - "Invalid JSON syntax or structure"
+      
+      suggested_commands:
+        - "Validate JSON format before sending request"
+        - "Check Content-Type header is application/json"
+        - "Use json.Valid() to validate JSON syntax"
+        - "Add proper error handling for BodyParser"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/api/ctx/#bodyparser"
+        - "https://golang.org/pkg/encoding/json/"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "fiber_route_not_found"
+    name: "Fiber Route Not Found"
+    
+    primary_pattern:
+      regex: "404.*Not Found|route.*not.*found|fiber.*404|path.*not.*registered"
+      confidence: 0.83
+    
+    secondary_patterns:
+      - regex: "GET|POST|PUT|DELETE.*404"
+        weight: 0.5
+        proximity_window: 15
+      - regex: "app\\.Get|app\\.Post|app\\.Put"
+        weight: 0.4
+        proximity_window: 30
+      - regex: "handler.*not.*found|route.*missing"
+        weight: 0.6
+        proximity_window: 20
+    
+    severity: "LOW"
+    category: ["routing", "http_status"]
+    
+    remediation:
+      description: "Fiber could not find matching route"
+      common_causes:
+        - "Route not registered in application"
+        - "Incorrect HTTP method"
+        - "URL path mismatch"
+        - "Missing route parameters"
+      
+      suggested_commands:
+        - "Verify route registration: app.Get('/path', handler)"
+        - "Check HTTP method matches route definition"
+        - "Validate URL path and parameters"
+        - "Use app.Use() for catch-all routes"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/guide/routing/"
+        - "https://docs.gofiber.io/api/app/#route-handlers"
+    
+    context_extraction:
+      lines_before: 8
+      lines_after: 5
+
+  - id: "fiber_middleware_error"
+    name: "Fiber Middleware Error"
+    
+    primary_pattern:
+      regex: "middleware.*error|fiber.*middleware.*failed|CORS.*error|middleware.*panic"
+      confidence: 0.86
+    
+    secondary_patterns:
+      - regex: "app\\.Use|fiber\\.Handler"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "cors.*middleware|logger.*middleware|compress.*middleware"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "c\\.Next\\(\\)|return.*c\\.Next"
+        weight: 0.4
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["middleware", "request_processing"]
+    
+    remediation:
+      description: "Fiber middleware encountered an error"
+      common_causes:
+        - "CORS policy configuration errors"
+        - "Authentication middleware failures"
+        - "Custom middleware panics"
+        - "Middleware chain interruption"
+      
+      suggested_commands:
+        - "Configure CORS allowed origins and methods"
+        - "Add error handling in custom middleware"
+        - "Check middleware order and dependencies"
+        - "Use c.Next() to continue middleware chain"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/guide/middleware/"
+        - "https://docs.gofiber.io/api/middleware/cors/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 10
+      include_stack_trace: true
+
+  - id: "fiber_server_startup_error"
+    name: "Fiber Server Startup Error"
+    
+    primary_pattern:
+      regex: "fiber.*Listen.*error|server.*startup.*failed|bind.*address.*already.*in.*use|Listen.*tcp.*error"
+      confidence: 0.92
+    
+    secondary_patterns:
+      - regex: "address already in use|port.*in.*use"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "app\\.Listen|fiber.*Listen"
+        weight: 0.5
+        proximity_window: 20
+      - regex: ":3000|:8080|:4000"
+        weight: 0.3
+        proximity_window: 25
+    
+    severity: "CRITICAL"
+    category: ["server", "startup", "port_binding"]
+    
+    remediation:
+      description: "Fiber server failed to start"
+      common_causes:
+        - "Port already in use by another process"
+        - "Invalid port number or binding address"
+        - "Insufficient permissions for port binding"
+        - "Network interface configuration issues"
+      
+      suggested_commands:
+        - "Check port usage: lsof -i :3000"
+        - "Use different port: app.Listen(':3001')"
+        - "Kill process using port: kill -9 $(lsof -t -i:3000)"
+        - "Check firewall and network permissions"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/api/app/#listen"
+        - "https://docs.gofiber.io/guide/faster-fiber/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 10
+
+  - id: "fiber_template_render_error"
+    name: "Fiber Template Rendering Error"
+    
+    primary_pattern:
+      regex: "template.*render.*error|Render\\(.*error|template.*not.*found|view.*engine.*error"
+      confidence: 0.85
+    
+    secondary_patterns:
+      - regex: "c\\.Render|fiber.*Render"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "html/template|template.*engine"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "views.*directory|template.*file.*missing"
+        weight: 0.7
+        proximity_window: 20
+    
+    severity: "MEDIUM"
+    category: ["templates", "rendering"]
+    
+    remediation:
+      description: "Fiber template rendering failed"
+      common_causes:
+        - "Template file not found"
+        - "Template engine not configured"
+        - "Template syntax errors"
+        - "Missing template data or variables"
+      
+      suggested_commands:
+        - "Verify template files exist in views directory"
+        - "Configure template engine: app.Settings.Views = engine"
+        - "Check template syntax and structure"
+        - "Ensure all template variables are provided"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/template/"
+        - "https://docs.gofiber.io/api/ctx/#render"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "fiber_fasthttp_error"
+    name: "Fiber FastHTTP Error"
+    
+    primary_pattern:
+      regex: "fasthttp.*error|valyala/fasthttp.*error|connection.*reset.*by.*peer|broken.*pipe.*fasthttp"
+      confidence: 0.88
+    
+    secondary_patterns:
+      - regex: "fasthttp\\.Server|fasthttp.*connection"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "connection.*closed|connection.*timeout"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "read.*tcp.*error|write.*tcp.*error"
+        weight: 0.4
+        proximity_window: 30
+    
+    severity: "MEDIUM"
+    category: ["fasthttp", "connection", "network"]
+    
+    remediation:
+      description: "Fiber FastHTTP layer encountered an error"
+      common_causes:
+        - "Client closed connection prematurely"
+        - "Network connectivity issues"
+        - "Request timeout or size limits exceeded"
+        - "TCP connection problems"
+      
+      suggested_commands:
+        - "Check client connection handling"
+        - "Review network connectivity and stability"
+        - "Configure appropriate timeout settings"
+        - "Monitor connection pool usage"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/guide/faster-fiber/"
+        - "https://github.com/valyala/fasthttp"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+
+  - id: "fiber_context_timeout"
+    name: "Fiber Context Timeout"
+    
+    primary_pattern:
+      regex: "context.*deadline.*exceeded|fiber.*timeout|request.*timeout.*exceeded|context.*timeout"
+      confidence: 0.89
+    
+    secondary_patterns:
+      - regex: "context\\.WithTimeout|context\\.WithDeadline"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "timeout.*middleware|request.*timeout"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "database.*timeout|external.*api.*timeout"
+        weight: 0.4
+        proximity_window: 30
+    
+    severity: "HIGH"
+    category: ["timeout", "context", "performance"]
+    
+    remediation:
+      description: "Fiber request processing exceeded timeout"
+      common_causes:
+        - "Long-running database operations"
+        - "Slow external service calls"
+        - "Insufficient timeout configuration"
+        - "Resource contention and blocking"
+      
+      suggested_commands:
+        - "Optimize database queries and connections"
+        - "Implement proper timeout handling"
+        - "Use timeout middleware for request limits"
+        - "Add caching for slow operations"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/api/middleware/timeout/"
+        - "https://golang.org/pkg/context/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+      include_stack_trace: true
+
+  - id: "fiber_static_file_error"
+    name: "Fiber Static File Error"
+    
+    primary_pattern:
+      regex: "static.*file.*not.*found|static.*serve.*error|file.*not.*found.*static|public.*directory.*error"
+      confidence: 0.84
+    
+    secondary_patterns:
+      - regex: "app\\.Static|fiber.*Static"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "404.*static|static.*404"
+        weight: 0.5
+        proximity_window: 15
+      - regex: "public.*assets|static.*assets"
+        weight: 0.4
+        proximity_window: 25
+    
+    severity: "LOW"
+    category: ["static_files", "assets", "file_serving"]
+    
+    remediation:
+      description: "Fiber failed to serve static file"
+      common_causes:
+        - "Static file does not exist"
+        - "Incorrect static directory path"
+        - "File permissions issues"
+        - "Static route configuration problems"
+      
+      suggested_commands:
+        - "Verify static files exist in specified directory"
+        - "Check static directory path: app.Static('/', './public')"
+        - "Verify file permissions are readable"
+        - "Review static route configuration"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/api/app/#static"
+        - "https://docs.gofiber.io/guide/routing/#static-files"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "fiber_websocket_upgrade_error"
+    name: "Fiber WebSocket Upgrade Error"
+    
+    primary_pattern:
+      regex: "websocket.*upgrade.*failed|websocket.*handshake.*error|upgrade.*websocket.*error|ws.*connection.*failed"
+      confidence: 0.87
+    
+    secondary_patterns:
+      - regex: "websocket\\.New|fiber.*websocket"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "Upgrade.*websocket|websocket.*protocol"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "websocket.*headers|connection.*upgrade"
+        weight: 0.4
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["websocket", "real_time", "upgrade"]
+    
+    remediation:
+      description: "Fiber WebSocket upgrade failed"
+      common_causes:
+        - "Invalid WebSocket upgrade headers"
+        - "WebSocket middleware not configured"
+        - "Client WebSocket implementation issues"
+        - "Network or protocol compatibility problems"
+      
+      suggested_commands:
+        - "Check WebSocket upgrade headers and protocol"
+        - "Configure WebSocket middleware properly"
+        - "Verify client WebSocket implementation"
+        - "Add error handling for WebSocket operations"
+      
+      documentation_links:
+        - "https://docs.gofiber.io/api/middleware/websocket/"
+        - "https://github.com/gofiber/websocket"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 10
+
+related_patterns:
+  - id: "fiber_panic_recovery"
+    related_to: ["fiber_middleware_error", "fiber_context_timeout"]
+  - id: "fiber_json_parse_error"
+    related_to: ["fiber_route_not_found"]
+  - id: "fiber_server_startup_error"
+    related_to: ["fiber_middleware_error"]
+  - id: "fiber_fasthttp_error"
+    related_to: ["fiber_context_timeout", "fiber_websocket_upgrade_error"]

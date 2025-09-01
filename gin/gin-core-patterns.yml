@@ -1,0 +1,372 @@
+metadata:
+  library_id: "gin-core-patterns"
+  version: "1.0.0"
+  maintainer: "podmortem-community"
+  compatibility: ["gin-1.7+", "gin-1.8+", "gin-1.9+"]
+  dependencies: []
+
+categories:
+  - web_framework
+  - http_server
+  - middleware
+  - routing
+  - json_binding
+  - recovery
+
+patterns:
+  - id: "gin_panic_recovery"
+    name: "Gin Panic Recovery"
+    
+    primary_pattern:
+      regex: "\\[GIN-debug\\].*\\[Recovery\\].*panic recovered|panic:.*runtime error|gin.*panic.*recovered"
+      confidence: 0.95
+    
+    secondary_patterns:
+      - regex: "runtime error.*invalid memory address|nil pointer dereference"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "\\[GIN\\].*500.*Internal Server Error"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "goroutine.*panic"
+        weight: 0.5
+        proximity_window: 30
+    
+    severity: "HIGH"
+    category: ["panic", "recovery", "runtime"]
+    
+    remediation:
+      description: "Gin panic recovery middleware caught a runtime panic"
+      common_causes:
+        - "Nil pointer dereference in handler"
+        - "Index out of bounds errors"
+        - "Type assertion failures"
+        - "Invalid memory access"
+      
+      suggested_commands:
+        - "Add nil checks before dereferencing pointers"
+        - "Validate array/slice bounds before access"
+        - "Use safe type assertions with ok pattern"
+        - "Review handler code for potential panics"
+      
+      documentation_links:
+        - "https://gin-gonic.com/docs/examples/using-middleware/"
+        - "https://golang.org/doc/effective_go#recover"
+    
+    context_extraction:
+      lines_before: 20
+      lines_after: 15
+      include_stack_trace: true
+
+  - id: "gin_binding_error"
+    name: "Gin JSON Binding Error"
+    
+    primary_pattern:
+      regex: "ShouldBindJSON.*error|bind.*json.*failed|invalid character.*json|json.*unmarshal.*error"
+      confidence: 0.88
+    
+    secondary_patterns:
+      - regex: "400.*Bad Request|binding.*failed"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "Content-Type.*application/json"
+        weight: 0.4
+        proximity_window: 25
+      - regex: "gin\\.Context.*ShouldBind|BindJSON"
+        weight: 0.5
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["binding", "json", "validation"]
+    
+    remediation:
+      description: "Gin failed to bind JSON request to struct"
+      common_causes:
+        - "Malformed JSON in request body"
+        - "Missing required fields"
+        - "Type mismatch between JSON and struct"
+        - "Invalid JSON syntax"
+      
+      suggested_commands:
+        - "Validate JSON format before sending request"
+        - "Check struct tags match JSON field names"
+        - "Use json.Valid() to validate JSON syntax"
+        - "Add proper error handling for binding failures"
+      
+      documentation_links:
+        - "https://gin-gonic.com/docs/examples/binding-and-validation/"
+        - "https://golang.org/pkg/encoding/json/"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "gin_route_not_found"
+    name: "Gin Route Not Found"
+    
+    primary_pattern:
+      regex: "\\[GIN\\].*404.*Not Found|404.*page not found|route.*not.*found"
+      confidence: 0.85
+    
+    secondary_patterns:
+      - regex: "GET|POST|PUT|DELETE|PATCH.*404"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "NoRoute.*handler|no.*matching.*route"
+        weight: 0.6
+        proximity_window: 15
+      - regex: "router.*GET|router.*POST"
+        weight: 0.3
+        proximity_window: 30
+    
+    severity: "LOW"
+    category: ["routing", "http_status"]
+    
+    remediation:
+      description: "Gin router could not find matching route"
+      common_causes:
+        - "Route not registered in router"
+        - "Incorrect HTTP method"
+        - "URL path mismatch"
+        - "Missing route parameters"
+      
+      suggested_commands:
+        - "Verify route is registered: router.GET('/path', handler)"
+        - "Check HTTP method matches route definition"
+        - "Validate URL path and parameters"
+        - "Use router.NoRoute() for custom 404 handling"
+      
+      documentation_links:
+        - "https://gin-gonic.com/docs/examples/basic/"
+        - "https://gin-gonic.com/docs/examples/custom-middleware/"
+    
+    context_extraction:
+      lines_before: 8
+      lines_after: 5
+
+  - id: "gin_middleware_error"
+    name: "Gin Middleware Error"
+    
+    primary_pattern:
+      regex: "middleware.*error|middleware.*failed|Use\\(.*error|custom.*middleware.*panic"
+      confidence: 0.87
+    
+    secondary_patterns:
+      - regex: "gin\\.HandlerFunc|c\\.Next\\(\\)"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "c\\.Abort|AbortWithStatus"
+        weight: 0.5
+        proximity_window: 15
+      - regex: "authentication.*failed|authorization.*failed"
+        weight: 0.4
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["middleware", "authentication"]
+    
+    remediation:
+      description: "Gin middleware encountered an error during processing"
+      common_causes:
+        - "Authentication middleware failures"
+        - "CORS middleware configuration errors"
+        - "Custom middleware panics"
+        - "Middleware chain interruption"
+      
+      suggested_commands:
+        - "Add error handling in custom middleware"
+        - "Check middleware order and dependencies"
+        - "Verify authentication credentials and logic"
+        - "Use c.Next() to continue middleware chain"
+      
+      documentation_links:
+        - "https://gin-gonic.com/docs/examples/using-middleware/"
+        - "https://gin-gonic.com/docs/examples/custom-middleware/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 10
+      include_stack_trace: true
+
+  - id: "gin_server_startup_error"
+    name: "Gin Server Startup Error"
+    
+    primary_pattern:
+      regex: "listen tcp.*bind.*address already in use|server.*failed.*start|gin.*server.*error|Run.*error"
+      confidence: 0.92
+    
+    secondary_patterns:
+      - regex: "address already in use|port.*already.*in.*use"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "router\\.Run|r\\.Run"
+        weight: 0.5
+        proximity_window: 20
+      - regex: ":8080|:3000|:8000"
+        weight: 0.3
+        proximity_window: 25
+    
+    severity: "CRITICAL"
+    category: ["server", "startup", "port_binding"]
+    
+    remediation:
+      description: "Gin server failed to start"
+      common_causes:
+        - "Port already in use by another process"
+        - "Insufficient permissions to bind port"
+        - "Invalid port number or configuration"
+        - "Network interface binding issues"
+      
+      suggested_commands:
+        - "Check port usage: lsof -i :8080"
+        - "Kill process using port: kill -9 $(lsof -t -i:8080)"
+        - "Use different port: r.Run(':8081')"
+        - "Check firewall and network permissions"
+      
+      documentation_links:
+        - "https://gin-gonic.com/docs/examples/basic/"
+        - "https://golang.org/pkg/net/http/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 10
+
+  - id: "gin_template_render_error"
+    name: "Gin Template Rendering Error"
+    
+    primary_pattern:
+      regex: "template.*render.*error|HTML.*render.*failed|template.*not.*found|LoadHTMLGlob.*error"
+      confidence: 0.86
+    
+    secondary_patterns:
+      - regex: "LoadHTMLGlob|LoadHTMLFiles"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "c\\.HTML|gin\\.H"
+        weight: 0.5
+        proximity_window: 15
+      - regex: "template.*undefined|template.*parse.*error"
+        weight: 0.7
+        proximity_window: 25
+    
+    severity: "MEDIUM"
+    category: ["templates", "rendering"]
+    
+    remediation:
+      description: "Gin template rendering failed"
+      common_causes:
+        - "Template file not found"
+        - "Template syntax errors"
+        - "Missing template variables"
+        - "Incorrect template path configuration"
+      
+      suggested_commands:
+        - "Verify template files exist in specified path"
+        - "Check template syntax and structure"
+        - "Ensure all template variables are provided"
+        - "Use r.LoadHTMLGlob() to load templates correctly"
+      
+      documentation_links:
+        - "https://gin-gonic.com/docs/examples/html-rendering/"
+        - "https://golang.org/pkg/html/template/"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "gin_cors_error"
+    name: "Gin CORS Error"
+    
+    primary_pattern:
+      regex: "CORS.*error|cross.*origin.*blocked|preflight.*failed|Access-Control-Allow-Origin"
+      confidence: 0.84
+    
+    secondary_patterns:
+      - regex: "OPTIONS.*request|preflight"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "cors.*middleware|AllowOrigins"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "blocked.*by.*CORS|origin.*not.*allowed"
+        weight: 0.7
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["cors", "security", "middleware"]
+    
+    remediation:
+      description: "CORS policy blocked the request"
+      common_causes:
+        - "Origin not in allowed origins list"
+        - "Missing CORS middleware configuration"
+        - "Preflight request handling issues"
+        - "Incorrect CORS headers"
+      
+      suggested_commands:
+        - "Add origin to AllowOrigins in CORS middleware"
+        - "Configure CORS middleware properly"
+        - "Handle OPTIONS requests for preflight"
+        - "Check browser developer tools for CORS errors"
+      
+      documentation_links:
+        - "https://github.com/gin-contrib/cors"
+        - "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "gin_context_deadline_exceeded"
+    name: "Gin Context Deadline Exceeded"
+    
+    primary_pattern:
+      regex: "context deadline exceeded|context.*timeout|request.*timeout|timeout.*exceeded"
+      confidence: 0.89
+    
+    secondary_patterns:
+      - regex: "context\\.WithTimeout|context\\.WithDeadline"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "http.*timeout|client.*timeout"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "database.*timeout|query.*timeout"
+        weight: 0.4
+        proximity_window: 30
+    
+    severity: "HIGH"
+    category: ["timeout", "context", "performance"]
+    
+    remediation:
+      description: "Request processing exceeded timeout limit"
+      common_causes:
+        - "Long-running database queries"
+        - "Slow external API calls"
+        - "Insufficient timeout configuration"
+        - "Resource contention and blocking"
+      
+      suggested_commands:
+        - "Optimize database queries and add indexes"
+        - "Implement proper timeout handling"
+        - "Use context.WithTimeout() appropriately"
+        - "Add caching for slow operations"
+      
+      documentation_links:
+        - "https://golang.org/pkg/context/"
+        - "https://gin-gonic.com/docs/examples/graceful-restart-or-stop/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+      include_stack_trace: true
+
+related_patterns:
+  - id: "gin_panic_recovery"
+    related_to: ["gin_middleware_error", "gin_context_deadline_exceeded"]
+  - id: "gin_binding_error"
+    related_to: ["gin_route_not_found"]
+  - id: "gin_server_startup_error"
+    related_to: ["gin_middleware_error"]
+  - id: "gin_cors_error"
+    related_to: ["gin_middleware_error"]

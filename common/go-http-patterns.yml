@@ -1,0 +1,414 @@
+metadata:
+  library_id: "go-http-patterns"
+  version: "1.0.0"
+  maintainer: "podmortem-community"
+  compatibility: ["go-1.18+", "go-1.19+", "go-1.20+", "go-1.21+"]
+  dependencies: []
+
+categories:
+  - http_server
+  - standard_library
+  - net_http
+  - json
+  - middleware
+  - tls
+
+patterns:
+  - id: "go_http_server_panic"
+    name: "Go HTTP Server Panic"
+    
+    primary_pattern:
+      regex: "http.*panic serving|panic.*http.*server|runtime error.*http.*handler"
+      confidence: 0.93
+    
+    secondary_patterns:
+      - regex: "runtime error.*invalid memory address|nil pointer dereference"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "http\\.ListenAndServe|http\\.Server"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "goroutine.*panic|stack trace"
+        weight: 0.6
+        proximity_window: 20
+    
+    severity: "HIGH"
+    category: ["panic", "http_server", "runtime"]
+    
+    remediation:
+      description: "Go HTTP server encountered a panic in handler"
+      common_causes:
+        - "Nil pointer dereference in handler function"
+        - "Index out of bounds in request processing"
+        - "Type assertion failures"
+        - "Concurrent map access without synchronization"
+      
+      suggested_commands:
+        - "Add panic recovery middleware"
+        - "Use defer/recover pattern in handlers"
+        - "Add nil checks before pointer dereferencing"
+        - "Use sync.Map for concurrent map access"
+      
+      documentation_links:
+        - "https://golang.org/pkg/net/http/"
+        - "https://golang.org/doc/effective_go#recover"
+    
+    context_extraction:
+      lines_before: 20
+      lines_after: 15
+      include_stack_trace: true
+
+  - id: "go_json_marshal_error"
+    name: "Go JSON Marshal/Unmarshal Error"
+    
+    primary_pattern:
+      regex: "json.*marshal.*error|json.*unmarshal.*error|invalid character.*json|json.*syntax.*error"
+      confidence: 0.90
+    
+    secondary_patterns:
+      - regex: "json\\.Marshal|json\\.Unmarshal"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "encoding/json|json\\.Decoder"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "unexpected end of JSON|invalid JSON"
+        weight: 0.6
+        proximity_window: 20
+    
+    severity: "MEDIUM"
+    category: ["json", "encoding", "data_processing"]
+    
+    remediation:
+      description: "Go JSON encoding/decoding failed"
+      common_causes:
+        - "Malformed JSON input"
+        - "Struct fields not exported (lowercase)"
+        - "Circular reference in data structure"
+        - "Invalid JSON syntax or format"
+      
+      suggested_commands:
+        - "Validate JSON format with json.Valid()"
+        - "Ensure struct fields are exported (capitalized)"
+        - "Check for circular references in structs"
+        - "Use json tags for proper field mapping"
+      
+      documentation_links:
+        - "https://golang.org/pkg/encoding/json/"
+        - "https://blog.golang.org/json"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "go_http_timeout_error"
+    name: "Go HTTP Client/Server Timeout"
+    
+    primary_pattern:
+      regex: "http.*timeout|context deadline exceeded|i/o timeout|timeout.*exceeded.*http"
+      confidence: 0.89
+    
+    secondary_patterns:
+      - regex: "http\\.Client.*Timeout|context\\.WithTimeout"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "net/http.*timeout|client.*timeout"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "dial tcp.*timeout|connection.*timeout"
+        weight: 0.4
+        proximity_window: 30
+    
+    severity: "HIGH"
+    category: ["timeout", "http_client", "performance"]
+    
+    remediation:
+      description: "Go HTTP operation exceeded timeout limit"
+      common_causes:
+        - "Slow server response times"
+        - "Network connectivity issues"
+        - "Insufficient timeout configuration"
+        - "Resource contention or blocking"
+      
+      suggested_commands:
+        - "Increase timeout values in http.Client"
+        - "Implement proper context timeout handling"
+        - "Add retry logic with exponential backoff"
+        - "Monitor network latency and server performance"
+      
+      documentation_links:
+        - "https://golang.org/pkg/net/http/#Client"
+        - "https://golang.org/pkg/context/"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+      include_stack_trace: true
+
+  - id: "go_http_connection_refused"
+    name: "Go HTTP Connection Refused"
+    
+    primary_pattern:
+      regex: "connection refused|dial tcp.*connection refused|connect.*connection refused"
+      confidence: 0.92
+    
+    secondary_patterns:
+      - regex: "http\\.Get|http\\.Post|http\\.Client"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "dial tcp|network.*unreachable"
+        weight: 0.5
+        proximity_window: 25
+      - regex: "localhost.*refused|127\\.0\\.0\\.1.*refused"
+        weight: 0.4
+        proximity_window: 15
+    
+    severity: "HIGH"
+    category: ["connection", "network", "service_unavailable"]
+    
+    remediation:
+      description: "Go HTTP client could not connect to server"
+      common_causes:
+        - "Target server is not running"
+        - "Incorrect host or port number"
+        - "Firewall blocking connection"
+        - "Network connectivity issues"
+      
+      suggested_commands:
+        - "Verify target server is running and accessible"
+        - "Check host and port configuration"
+        - "Test connectivity: telnet host port"
+        - "Review firewall and network settings"
+      
+      documentation_links:
+        - "https://golang.org/pkg/net/http/"
+        - "https://golang.org/pkg/net/"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 10
+
+  - id: "go_http_tls_error"
+    name: "Go HTTP TLS/SSL Error"
+    
+    primary_pattern:
+      regex: "tls.*handshake.*failed|x509.*certificate.*invalid|tls.*connection.*error|ssl.*error"
+      confidence: 0.88
+    
+    secondary_patterns:
+      - regex: "crypto/tls|tls\\.Config"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "certificate.*expired|certificate.*unknown.*authority"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "https.*request|tls.*client"
+        weight: 0.4
+        proximity_window: 30
+    
+    severity: "MEDIUM"
+    category: ["tls", "security", "certificates"]
+    
+    remediation:
+      description: "Go HTTP TLS/SSL connection failed"
+      common_causes:
+        - "Invalid or expired SSL certificate"
+        - "Certificate authority not trusted"
+        - "TLS version incompatibility"
+        - "Hostname verification failures"
+      
+      suggested_commands:
+        - "Check certificate validity and expiration"
+        - "Update certificate authority bundle"
+        - "Configure TLS settings: tls.Config{}"
+        - "Use InsecureSkipVerify for testing only"
+      
+      documentation_links:
+        - "https://golang.org/pkg/crypto/tls/"
+        - "https://golang.org/pkg/net/http/#Transport"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 12
+
+  - id: "go_http_request_too_large"
+    name: "Go HTTP Request Too Large"
+    
+    primary_pattern:
+      regex: "request.*too.*large|http.*request.*entity.*too.*large|body.*too.*large|413.*Payload.*Too.*Large"
+      confidence: 0.85
+    
+    secondary_patterns:
+      - regex: "MaxBytesReader|request.*body.*limit"
+        weight: 0.7
+        proximity_window: 20
+      - regex: "Content-Length.*exceeded|body.*size.*limit"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "http\\.MaxBytesReader|io\\.LimitReader"
+        weight: 0.5
+        proximity_window: 15
+    
+    severity: "MEDIUM"
+    category: ["request_size", "limits", "validation"]
+    
+    remediation:
+      description: "Go HTTP request body exceeded size limits"
+      common_causes:
+        - "Request body larger than configured limit"
+        - "Large file uploads without proper handling"
+        - "Insufficient request size configuration"
+        - "Client sending oversized payloads"
+      
+      suggested_commands:
+        - "Increase request body size limits if appropriate"
+        - "Use http.MaxBytesReader for body size limiting"
+        - "Implement streaming for large file uploads"
+        - "Add client-side payload size validation"
+      
+      documentation_links:
+        - "https://golang.org/pkg/net/http/#MaxBytesReader"
+        - "https://golang.org/pkg/io/#LimitReader"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "go_http_method_not_allowed"
+    name: "Go HTTP Method Not Allowed"
+    
+    primary_pattern:
+      regex: "405.*Method.*Not.*Allowed|method.*not.*allowed|http.*method.*not.*supported"
+      confidence: 0.84
+    
+    secondary_patterns:
+      - regex: "GET|POST|PUT|DELETE|PATCH.*405"
+        weight: 0.5
+        proximity_window: 15
+      - regex: "http\\.MethodGet|http\\.MethodPost"
+        weight: 0.4
+        proximity_window: 25
+      - regex: "mux.*method|router.*method"
+        weight: 0.6
+        proximity_window: 20
+    
+    severity: "LOW"
+    category: ["http_methods", "routing", "validation"]
+    
+    remediation:
+      description: "Go HTTP handler does not support requested method"
+      common_causes:
+        - "Handler only supports specific HTTP methods"
+        - "Route configuration missing method specification"
+        - "Client using wrong HTTP method"
+        - "Missing method handling in custom router"
+      
+      suggested_commands:
+        - "Add support for required HTTP methods in handler"
+        - "Check route configuration includes correct methods"
+        - "Validate client is using correct HTTP method"
+        - "Implement method checking in custom handlers"
+      
+      documentation_links:
+        - "https://golang.org/pkg/net/http/"
+        - "https://golang.org/pkg/net/http/#ServeMux"
+    
+    context_extraction:
+      lines_before: 10
+      lines_after: 8
+
+  - id: "go_http_server_closed"
+    name: "Go HTTP Server Closed"
+    
+    primary_pattern:
+      regex: "http.*server closed|server.*shutdown|ErrServerClosed|server.*stopped"
+      confidence: 0.87
+    
+    secondary_patterns:
+      - regex: "http\\.ErrServerClosed|server\\.Close"
+        weight: 0.7
+        proximity_window: 15
+      - regex: "graceful.*shutdown|server.*shutdown"
+        weight: 0.6
+        proximity_window: 20
+      - regex: "context\\.Done|signal.*interrupt"
+        weight: 0.5
+        proximity_window: 25
+    
+    severity: "LOW"
+    category: ["server_lifecycle", "shutdown", "graceful_stop"]
+    
+    remediation:
+      description: "Go HTTP server was closed or shutdown"
+      common_causes:
+        - "Graceful server shutdown initiated"
+        - "Server received interrupt signal"
+        - "Application termination"
+        - "Programmatic server close"
+      
+      suggested_commands:
+        - "This is often expected during shutdown"
+        - "Implement graceful shutdown handling"
+        - "Check for proper cleanup in shutdown process"
+        - "Monitor shutdown timing and completion"
+      
+      documentation_links:
+        - "https://golang.org/pkg/net/http/#Server.Shutdown"
+        - "https://golang.org/pkg/os/signal/"
+    
+    context_extraction:
+      lines_before: 12
+      lines_after: 8
+
+  - id: "go_http_context_canceled"
+    name: "Go HTTP Context Canceled"
+    
+    primary_pattern:
+      regex: "context canceled|context\\.Canceled|request.*canceled|http.*context.*canceled"
+      confidence: 0.86
+    
+    secondary_patterns:
+      - regex: "context\\.WithCancel|context\\.CancelFunc"
+        weight: 0.6
+        proximity_window: 25
+      - regex: "client.*disconnected|connection.*closed"
+        weight: 0.5
+        proximity_window: 20
+      - regex: "request\\.Context|http\\.Request"
+        weight: 0.4
+        proximity_window: 30
+    
+    severity: "MEDIUM"
+    category: ["context", "cancellation", "client_disconnect"]
+    
+    remediation:
+      description: "Go HTTP request context was canceled"
+      common_causes:
+        - "Client disconnected before response completed"
+        - "Request timeout exceeded"
+        - "Programmatic context cancellation"
+        - "Parent context canceled"
+      
+      suggested_commands:
+        - "Check for client disconnection handling"
+        - "Implement proper context cancellation handling"
+        - "Monitor request completion rates"
+        - "Add logging for canceled requests"
+      
+      documentation_links:
+        - "https://golang.org/pkg/context/"
+        - "https://golang.org/pkg/net/http/#Request.Context"
+    
+    context_extraction:
+      lines_before: 15
+      lines_after: 10
+
+related_patterns:
+  - id: "go_http_server_panic"
+    related_to: ["go_json_marshal_error", "go_http_timeout_error"]
+  - id: "go_http_timeout_error"
+    related_to: ["go_http_connection_refused", "go_http_context_canceled"]
+  - id: "go_http_tls_error"
+    related_to: ["go_http_connection_refused"]
+  - id: "go_http_context_canceled"
+    related_to: ["go_http_timeout_error"]
