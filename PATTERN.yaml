@@ -1,0 +1,32 @@
+name: "Go Web Framework Patterns"
+version: "1.0.0"
+description: "Error patterns for Go web frameworks including Gin, Echo, Fiber, Chi, and gRPC services"
+author: "Podmortem Community"
+
+languages:
+  - go
+
+frameworks:
+  - gin
+  - echo
+  - fiber
+  - chi
+  - gorilla
+  - grpc
+  - websocket
+  - common
+
+focuses:
+  - "HTTP server error handling"
+  - "Middleware chain failures"
+  - "JSON marshaling/unmarshaling errors"
+  - "Context handling and timeouts"
+  - "Route parameter parsing issues"
+  - "WebSocket upgrade and connection errors"
+  - "gRPC service and client errors"
+  - "Database connection pooling issues"
+  - "Concurrent request handling"
+  - "Memory leaks and goroutine issues"
+
+
+
